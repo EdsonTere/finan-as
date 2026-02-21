@@ -24,8 +24,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
     const handleLogout = async () => {
         if (confirm('Tem certeza que deseja sair?')) {
-            await logout();
-            onClose();
+            try {
+                await logout();
+                onClose();
+                // Force reload to clear all states and redirect to login
+                window.location.href = '/';
+            } catch (err) {
+                console.error('Logout error:', err);
+                alert('Erro ao sair do sistema.');
+            }
         }
     };
 
@@ -68,7 +75,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 outline-none rounded-xl p-3 pl-10 text-sm font-medium dark:text-white transition-all"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-brand-500 outline-none rounded-xl p-3 pl-10 text-sm font-medium text-slate-900 dark:text-white transition-all"
                                     placeholder="Seu nome"
                                     required
                                 />

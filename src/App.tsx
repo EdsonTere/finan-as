@@ -32,15 +32,29 @@ function Dashboard() {
 
   const monthlyHistory = useMemo(() => {
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const currentMonth = new Date().getMonth();
-    return Array.from({ length: 1 }).map(() => {
+    const now = new Date();
+
+    // Generate last 6 months
+    return Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const monthTag = d.toISOString().substring(0, 7);
+      const monthIndex = d.getMonth();
+
+      const monthIncome = (transactions || [])
+        .filter(t => t.type === 'income' && t.date.substring(0, 7) === monthTag)
+        .reduce((acc, curr) => acc + (parseFloat(curr.amount.toString()) || 0), 0);
+
+      const monthExpense = (transactions || [])
+        .filter(t => t.type === 'expense' && t.date.substring(0, 7) === monthTag)
+        .reduce((acc, curr) => acc + (parseFloat(curr.amount.toString()) || 0), 0);
+
       return {
-        name: months[currentMonth],
-        receitas: summary.monthlyIncome,
-        despesas: summary.monthlyExpense,
+        name: months[monthIndex],
+        receitas: monthIncome,
+        despesas: monthExpense,
       };
     });
-  }, [summary]);
+  }, [transactions]);
 
   const openModal = (type: 'income' | 'expense') => {
     setModalType(type);
