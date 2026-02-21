@@ -55,7 +55,12 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({ isOpen, onClose }) => 
             onClose();
         } catch (err: any) {
             console.error('Failed to save budget:', err);
-            alert('Não foi possível salvar o orçamento. Verifique sua conexão.');
+            const detailedMessage = `Não foi possível salvar o orçamento.\n\n` +
+                `Erro: ${err.message || 'Desconhecido'}\n` +
+                (err.details ? `Detalhes: ${err.details}\n` : '') +
+                (err.hint ? `Dica: ${err.hint}\n` : '') +
+                `Código: ${err.code || 'N/A'}`;
+            alert(detailedMessage);
         } finally {
             setIsSubmitting(false);
         }

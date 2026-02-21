@@ -129,8 +129,14 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ type = 'all'
                                                 if (confirm('Excluir esta transação?')) {
                                                     try {
                                                         await deleteTransaction(t.id);
-                                                    } catch (err) {
-                                                        alert('Erro ao excluir transação.');
+                                                    } catch (err: any) {
+                                                        console.error('Failed to delete transaction:', err);
+                                                        const detailedError = `Não foi possível excluir a transação.\n\n` +
+                                                            `Erro: ${err.message || 'Desconhecido'}\n` +
+                                                            (err.details ? `Detalhes: ${err.details}\n` : '') +
+                                                            (err.hint ? `Dica: ${err.hint}\n` : '') +
+                                                            `Código: ${err.code || 'N/A'}`;
+                                                        alert(detailedError);
                                                     }
                                                 }
                                             }}

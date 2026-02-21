@@ -327,7 +327,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const deleteAccount = async (id: string) => {
         const { error } = await supabase.from('accounts').delete().eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error('Error deleting account:', error);
+            const detailedError = new Error(error.message || 'Erro ao excluir conta');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
+        }
         setAccounts(prev => prev.filter(acc => acc.id !== id));
     };
 
@@ -341,7 +348,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         delete dbUpdates.isActive;
 
         const { error } = await supabase.from('accounts').update(dbUpdates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error('Error updating account:', error);
+            const detailedError = new Error(error.message || 'Erro ao atualizar conta');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
+        }
         setAccounts(prev => prev.map(acc => acc.id === id ? { ...acc, ...updates } : acc));
     };
 
@@ -370,7 +384,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const deleteCategory = async (id: string) => {
         const { error } = await supabase.from('categories').delete().eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error('Error deleting category:', error);
+            const detailedError = new Error(error.message || 'Erro ao excluir categoria');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
+        }
         setCategories(prev => prev.filter(cat => cat.id !== id));
     };
 
@@ -382,7 +403,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         delete dbUpdates.isActive;
 
         const { error } = await supabase.from('categories').update(dbUpdates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error('Error updating category:', error);
+            const detailedError = new Error(error.message || 'Erro ao atualizar categoria');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
+        }
         setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, ...updates } : cat));
     };
 
@@ -409,7 +437,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const deleteBudget = async (id: string) => {
         const { error } = await supabase.from('budgets').delete().eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error('Error deleting budget:', error);
+            const detailedError = new Error(error.message || 'Erro ao excluir orçamento');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
+        }
         setBudgets(prev => prev.filter(b => b.id !== id));
     };
 
@@ -421,7 +456,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         delete dbUpdates.categoryId;
 
         const { error } = await supabase.from('budgets').update(dbUpdates).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error('Error updating budget:', error);
+            const detailedError = new Error(error.message || 'Erro ao atualizar orçamento');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
+        }
         setBudgets(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
     };
 

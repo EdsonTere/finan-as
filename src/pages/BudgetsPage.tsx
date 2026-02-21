@@ -80,7 +80,21 @@ export const BudgetsPage: React.FC = () => {
                                         <div className="flex items-center gap-2">
                                             <p className="text-sm font-bold dark:text-white">{budget.categoryName}</p>
                                             <button
-                                                onClick={() => deleteBudget(budget.id)}
+                                                onClick={async () => {
+                                                    if (confirm('Excluir este orçamento?')) {
+                                                        try {
+                                                            await deleteBudget(budget.id);
+                                                        } catch (err: any) {
+                                                            console.error('Failed to delete budget:', err);
+                                                            const detailedError = `Não foi possível excluir o orçamento.\n\n` +
+                                                                `Erro: ${err.message || 'Desconhecido'}\n` +
+                                                                (err.details ? `Detalhes: ${err.details}\n` : '') +
+                                                                (err.hint ? `Dica: ${err.hint}\n` : '') +
+                                                                `Código: ${err.code || 'N/A'}`;
+                                                            alert(detailedError);
+                                                        }
+                                                    }
+                                                }}
                                                 className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-danger"
                                             >
                                                 <Trash2 size={14} />

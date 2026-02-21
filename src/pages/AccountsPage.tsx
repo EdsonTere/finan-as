@@ -34,7 +34,8 @@ export const AccountsPage: React.FC = () => {
                 `Erro: ${err.message || 'Desconhecido'}\n` +
                 (err.details ? `Detalhes: ${err.details}\n` : '') +
                 (err.hint ? `Dica: ${err.hint}\n` : '') +
-                `Código: ${err.code || 'N/A'}`;
+                `Código: ${err.code || 'N/A'}\n\n` +
+                `Verifique se as permissões (RLS) do Supabase estão configuradas corretamente.`;
             alert(detailedMessage);
         } finally {
             setIsSubmitting(false);
