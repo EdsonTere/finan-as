@@ -11,7 +11,6 @@ interface ProfileModalProps {
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
     const { user, updateProfile, logout } = useAuth();
     const [name, setName] = useState(user?.name || '');
-    const [email, setEmail] = useState(user?.email || '');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,7 +81,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                 <input
                                     type="email"
-                                    value={email}
+                                    value={user?.email || ''}
                                     disabled
                                     className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-transparent outline-none rounded-xl p-3 pl-10 text-sm font-medium dark:text-white transition-all cursor-not-allowed"
                                     placeholder="exemplo@email.com"
