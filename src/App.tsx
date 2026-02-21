@@ -223,14 +223,46 @@ function AppContent() {
     </div>
   );
 
-  if (isAuthLoading || isFinanceLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">Sincronizando dados...</p>
+  if (isAuthLoading || isFinanceLoading) {
+    const [showForceButton, setShowForceButton] = useState(false);
+
+    // Show force button after 10 seconds
+    useMemo(() => {
+      const timer = setTimeout(() => setShowForceButton(true), 10000);
+      return () => clearTimeout(timer);
+    }, []);
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+        <div className="flex flex-col items-center gap-6 max-w-sm w-full">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-slate-200 dark:border-slate-800 rounded-full"></div>
+            <div className="absolute top-0 w-16 h-16 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-slate-900 dark:text-white font-bold text-lg">Sincronizando dados...</p>
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
+                Autenticação: {isAuthLoading ? <span className="animate-pulse">◌ Verificando...</span> : <span className="text-success">✓ OK</span>}
+              </p>
+              <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
+                Banco de Dados: {isFinanceLoading ? <span className="animate-pulse">◌ Conectando...</span> : <span className="text-success">✓ OK</span>}
+              </p>
+            </div>
+          </div>
+
+          {showForceButton && (
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm shadow-lg animate-bounce"
+            >
+              Forçar Recarregamento
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   if (!isAuthenticated) return <LoginPage />;
 

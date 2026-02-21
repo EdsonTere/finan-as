@@ -129,8 +129,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             const fetchErrors = results.filter(r => r.error);
             if (fetchErrors.length > 0) {
+                console.warn('Partial fetch errors encountered:', fetchErrors);
                 // Ignore 403 errors which might happen if RLS is enabled but session not fully ready
-                const actualError = fetchErrors.find(r => r.error?.code !== '42501');
+                const actualError = fetchErrors.find(r => r.error?.code !== '42501' && r.error?.code !== 'PGRST301');
                 if (actualError) throw new Error(actualError.error?.message || 'Database error');
             }
 

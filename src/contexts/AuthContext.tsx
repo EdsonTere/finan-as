@@ -29,6 +29,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         // Check active session
         const initAuth = async () => {
+            const timeout = setTimeout(() => {
+                console.warn('Auth initialization taking too long, forcing complete...');
+                setIsLoading(false);
+            }, 8000);
+
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
@@ -37,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } catch (error) {
                 console.error('Error initializing auth:', error);
             } finally {
+                clearTimeout(timeout);
                 setIsLoading(false);
             }
         };
