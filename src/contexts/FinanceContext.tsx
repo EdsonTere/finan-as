@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 export type AccountType = 'bank' | 'wallet' | 'credit' | 'debit' | 'pix' | 'other';
 
@@ -97,6 +98,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [isLoading, setIsLoading] = useState(true);
     const [realtimeStatus, setRealtimeStatus] = useState('CONNECTING');
     const [error, setError] = useState<string | null>(null);
+    const { isAuthenticated } = useAuth();
     const [settings, setSettings] = useState<Settings>(() => {
         try {
             const stored = localStorage.getItem('finanças_settings');
@@ -182,10 +184,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
     }, []);
 
-    // Initial load
+    // Initial load and reload on auth change
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (isAuthenticated) {
+            console.log('User authenticated, fetching finance data...');
+            fetchData();
+        } else {
+            // Clear state on logout
+            setAccounts([]);
+            setCategories([]);
+            setTransactions([]);
+            setBudgets([]);
+            setIsLoading(false);
+        }
+    }, [fetchData, isAuthenticated]);
 
     // Realtime subscription
     useEffect(() => {
