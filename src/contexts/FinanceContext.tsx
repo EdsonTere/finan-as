@@ -141,9 +141,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const fetchErrors = results.filter(r => r.error);
             if (fetchErrors.length > 0) {
                 console.warn('Partial fetch errors encountered:', fetchErrors);
-                // Ignore 403 errors which might happen if RLS is enabled but session not fully ready
-                const actualError = fetchErrors.find(r => r.error?.code !== '42501' && r.error?.code !== 'PGRST301');
-                if (actualError) throw new Error(actualError.error?.message || 'Database error');
+                // Throw error if something actually failed, including permission denied 42501
+                const actualError = fetchErrors.find(r => r.error?.code !== 'PGRST301');
+                if (actualError) {
+                    const msg = actualError.error?.code === '42501'
+                        ? 'Permissão negada (RLS). Rode o script de recuperação no Supabase.'
+                        : actualError.error?.message || 'Database error';
+                    throw new Error(msg);
+                }
             }
 
             const [accountsRes, categoriesRes, transactionsRes, budgetsRes] = results;

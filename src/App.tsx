@@ -224,6 +224,7 @@ function AppContent() {
   );
 
   if (isAuthLoading || isFinanceLoading) {
+    const { user } = useAuth();
     const [showForceButton, setShowForceButton] = useState(false);
 
     // Show force button after 10 seconds
@@ -243,7 +244,7 @@ function AppContent() {
             <p className="text-slate-900 dark:text-white font-bold text-lg">Sincronizando dados...</p>
             <div className="flex flex-col gap-1">
               <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
-                Autenticação: {isAuthLoading ? <span className="animate-pulse">◌ Verificando...</span> : <span className="text-success">✓ OK</span>}
+                Autenticação: {isAuthLoading ? <span className="animate-pulse">◌ Verificando...</span> : <span className="text-success">✓ OK ({user?.email || 'Nenhum'})</span>}
               </p>
               <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
                 Banco de Dados: {isFinanceLoading ? <span className="animate-pulse">◌ Conectando...</span> : <span className="text-success">✓ OK</span>}
