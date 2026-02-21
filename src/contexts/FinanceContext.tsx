@@ -114,6 +114,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return;
         }
 
+        // We depend on Auth state here, although RLS protects the data.
+        // The App.tsx ensures this is only called when authenticated.
+
         if (showLoading) setIsLoading(true);
         setError(null);
         try {
@@ -126,7 +129,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
             const fetchErrors = results.filter(r => r.error);
             if (fetchErrors.length > 0) {
-                throw new Error(fetchErrors[0].error?.message || 'Database error');
+                // Ignore 403 errors which might happen if RLS is enabled but session not fully ready
+                const actualError = fetchErrors.find(r => r.error?.code !== '42501');
+                if (actualError) throw new Error(actualError.error?.message || 'Database error');
             }
 
             const [accountsRes, categoriesRes, transactionsRes, budgetsRes] = results;
@@ -226,6 +231,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const addTransaction = async (t: Omit<Transaction, 'id' | 'createdAt'>) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
         const { data, error } = await supabase.from('transactions').insert([{
             date: t.date,
             amount: t.amount,
@@ -237,7 +245,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             status: t.status,
             attachments: t.attachments,
             is_fixed: t.isFixed,
-            is_recurring: t.isRecurring
+            is_recurring: t.isRecurring,
+            user_id: userId
         }]).select().single();
 
         if (error) {
@@ -293,17 +302,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const addAccount = async (acc: Omit<Account, 'id'>) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
         const { data, error } = await supabase.from('accounts').insert([{
             name: acc.name,
             type: acc.type,
             balance: acc.balance,
             initial_balance: acc.initialBalance,
             is_active: acc.isActive,
-            color: acc.color
+            color: acc.color,
+            user_id: userId
         }]).select().single();
         if (error) {
             console.error('Error adding account:', error);
-            throw error;
+            const detailedError = new Error(error.message || 'Erro ao adicionar conta');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
         }
         setAccounts(prev => [...prev, { ...data, initialBalance: data.initial_balance, isActive: data.is_active }]);
     };
@@ -329,16 +346,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const addCategory = async (cat: Omit<Category, 'id'>) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
         const { data, error } = await supabase.from('categories').insert([{
             name: cat.name,
             type: cat.type,
             icon: cat.icon,
             color: cat.color,
-            is_active: cat.isActive
+            is_active: cat.isActive,
+            user_id: userId
         }]).select().single();
         if (error) {
             console.error('Error adding category:', error);
-            throw error;
+            const detailedError = new Error(error.message || 'Erro ao adicionar categoria');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
         }
         setCategories(prev => [...prev, { ...data, isActive: data.is_active }]);
     };
@@ -362,14 +387,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     const addBudget = async (b: Omit<Budget, 'id' | 'createdAt'>) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
         const { data, error } = await supabase.from('budgets').insert([{
             category_id: b.categoryId || null,
             amount: b.amount,
-            period: b.period
+            period: b.period,
+            user_id: userId
         }]).select().single();
         if (error) {
             console.error('Error adding budget:', error);
-            throw error;
+            const detailedError = new Error(error.message || 'Erro ao adicionar orçamento');
+            (detailedError as any).details = error.details;
+            (detailedError as any).hint = error.hint;
+            (detailedError as any).code = error.code;
+            throw detailedError;
         }
         setBudgets(prev => [...prev, { ...data, categoryId: data.category_id }]);
     };

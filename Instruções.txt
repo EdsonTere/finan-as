@@ -1,0 +1,16 @@
+Sim, você precisa rodar o servidor de desenvolvimento para visualizar o projeto no navegador.
+
+Como o projeto utiliza Vite, o comando para iniciar é npm run dev. Eu já tomei a liberdade de iniciá-lo para você agora mesmo.
+
+O projeto já está rodando em: 👉 http://localhost:5173/
+
+Como fazer nas próximas vezes:
+Abra o terminal na pasta do projeto (c:\Users\EDSON PC\Desktop\Finanças).
+Digite o comando:
+bash
+npm run dev
+Mantenha o terminal aberto enquanto estiver trabalhando no projeto.
+
+
+email:edsonveve@gmail.com
+senha: teste123

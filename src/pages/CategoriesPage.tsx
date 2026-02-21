@@ -38,7 +38,12 @@ export const CategoriesPage: React.FC = () => {
             setIsAdding(false);
         } catch (err: any) {
             console.error('Failed to add category:', err);
-            alert('Não foi possível adicionar a categoria. Verifique sua conexão.');
+            const detailedMessage = `Não foi possível adicionar a categoria.\n\n` +
+                `Erro: ${err.message || 'Desconhecido'}\n` +
+                (err.details ? `Detalhes: ${err.details}\n` : '') +
+                (err.hint ? `Dica: ${err.hint}\n` : '') +
+                `Código: ${err.code || 'N/A'}`;
+            alert(detailedMessage);
         } finally {
             setIsSubmitting(false);
         }

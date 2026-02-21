@@ -86,8 +86,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             onClose();
         } catch (err: any) {
             console.error('Failed to save transaction:', err);
-            const errorMessage = err.message || 'Erro desconhecido';
-            alert(`Não foi possível salvar a transação.\n\nDetalhes: ${errorMessage}\n\nVerifique se as permissões (RLS) do Supabase estão configuradas para permitir inserções.`);
+            const detailedMessage = `Não foi possível salvar a transação.\n\n` +
+                `Erro: ${err.message || 'Desconhecido'}\n` +
+                (err.details ? `Detalhes: ${err.details}\n` : '') +
+                (err.hint ? `Dica: ${err.hint}\n` : '') +
+                `Código: ${err.code || 'N/A'}\n\n` +
+                `Verifique se as permissões (RLS) do Supabase estão configuradas para permitir inserções.`;
+            alert(detailedMessage);
         } finally {
             setIsSubmitting(false);
         }

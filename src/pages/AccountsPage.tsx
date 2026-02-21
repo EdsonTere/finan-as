@@ -30,7 +30,12 @@ export const AccountsPage: React.FC = () => {
             resetForm();
         } catch (err: any) {
             console.error('Failed to save account:', err);
-            alert('Não foi possível salvar a conta. Verifique sua conexão.');
+            const detailedMessage = `Não foi possível salvar a conta.\n\n` +
+                `Erro: ${err.message || 'Desconhecido'}\n` +
+                (err.details ? `Detalhes: ${err.details}\n` : '') +
+                (err.hint ? `Dica: ${err.hint}\n` : '') +
+                `Código: ${err.code || 'N/A'}`;
+            alert(detailedMessage);
         } finally {
             setIsSubmitting(false);
         }

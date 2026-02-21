@@ -1,19 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
     id: string;
     name: string;
     email: string;
     role: 'admin' | 'user';
-    permissions: string[];
+    avatar_url?: string;
 }
 
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<void>;
-    logout: () => void;
-    updateProfile: (updates: Partial<User>) => void;
+    signUp: (email: string, password: string, name: string) => Promise<void>;
+    logout: () => Promise<void>;
+    updateProfile: (updates: Partial<User>) => Promise<void>;
     isLoading: boolean;
 }
 
@@ -24,51 +27,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Check local storage for session
-        const savedUser = localStorage.getItem('finanças_user');
-        if (savedUser) {
+        // Check active session
+        const initAuth = async () => {
             try {
-                setUser(JSON.parse(savedUser));
-            } catch (e) {
-                console.error('Failed to parse user session', e);
-                localStorage.removeItem('finanças_user');
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    await fetchProfile(session.user);
+                }
+            } catch (error) {
+                console.error('Error initializing auth:', error);
+            } finally {
+                setIsLoading(false);
             }
-        }
-        setIsLoading(false);
-    }, []);
-
-    const login = async (email: string, _password: string) => {
-        // Mock login logic
-        setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
-
-        const mockUser: User = {
-            id: '1',
-            name: 'Edson Admin',
-            email: email,
-            role: email.includes('admin') ? 'admin' : 'user',
-            permissions: ['read', 'write', 'delete', 'manage_users']
         };
 
-        setUser(mockUser);
-        localStorage.setItem('finanças_user', JSON.stringify(mockUser));
-        setIsLoading(false);
+        initAuth();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (session?.user) {
+                await fetchProfile(session.user);
+            } else {
+                setUser(null);
+            }
+            setIsLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const fetchProfile = async (supabaseUser: SupabaseUser) => {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', supabaseUser.id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching profile:', error);
+            // Fallback to basic user info if profile fetch fails
+            setUser({
+                id: supabaseUser.id,
+                email: supabaseUser.email || '',
+                name: supabaseUser.user_metadata?.name || 'Usuário',
+                role: 'user'
+            });
+            return;
+        }
+
+        setUser({
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            name: profile.name || 'Usuário',
+            role: profile.role || 'user',
+            avatar_url: profile.avatar_url
+        });
     };
 
-    const logout = () => {
+    const login = async (email: string, password: string) => {
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+        if (error) throw error;
+    };
+
+    const signUp = async (email: string, password: string, name: string) => {
+        const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    name: name
+                }
+            }
+        });
+        if (error) throw error;
+    };
+
+    const logout = async () => {
+        await supabase.auth.signOut();
         setUser(null);
-        localStorage.removeItem('finanças_user');
     };
 
-    const updateProfile = (updates: Partial<User>) => {
+    const updateProfile = async (updates: Partial<User>) => {
         if (!user) return;
-        const updatedUser = { ...user, ...updates };
-        setUser(updatedUser);
-        localStorage.setItem('finanças_user', JSON.stringify(updatedUser));
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                name: updates.name,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+
+        if (error) throw error;
+        setUser(prev => prev ? { ...prev, ...updates } : null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, updateProfile, isLoading }}>
+        <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signUp, logout, updateProfile, isLoading }}>
             {children}
         </AuthContext.Provider>
     );
