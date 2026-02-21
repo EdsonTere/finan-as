@@ -119,6 +119,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (showLoading) setIsLoading(true);
         setError(null);
+
+        const timeout = setTimeout(() => {
+            if (showLoading) {
+                console.warn('Finance data fetch taking too long, forcing complete...');
+                setError('A sincronização com o banco de dados está lenta. Tente atualizar a página ou use o botão de Forçar Recarregamento.');
+                setIsLoading(false);
+            }
+        }, 12000);
+
         try {
             const results = await Promise.all([
                 supabase.from('accounts').select('*').order('name'),
@@ -168,6 +177,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             console.error('Error fetching data from Supabase:', err);
             setError(err.message || 'Failed to connect to database');
         } finally {
+            clearTimeout(timeout);
             if (showLoading) setIsLoading(false);
         }
     }, []);
