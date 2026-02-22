@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FinanceProvider, useFinance } from './contexts/FinanceContext'
 import { MainLayout } from './components/layout/MainLayout'
