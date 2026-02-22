@@ -228,7 +228,7 @@ function AppContent() {
     const [showForceButton, setShowForceButton] = useState(false);
 
     // Show force button after 10 seconds
-    useMemo(() => {
+    useEffect(() => {
       const timer = setTimeout(() => setShowForceButton(true), 10000);
       return () => clearTimeout(timer);
     }, []);
