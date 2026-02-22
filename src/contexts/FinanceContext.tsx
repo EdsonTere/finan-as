@@ -125,12 +125,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const timeout = setTimeout(() => {
             if (showLoading) {
                 console.warn('Finance data fetch taking too long, forcing complete...');
-                setError('A sincronização com o banco de dados está lenta. Tente atualizar a página ou use o botão de Forçar Recarregamento.');
+                setError('A sincronização está demorando mais que o esperado. Seus dados podem aparecer em instantes ou você pode precisar rodar o script de correção no Supabase.');
                 setIsLoading(false);
             }
-        }, 12000);
+        }, 15000);
 
         try {
+            console.log('[Finance] Fetching data...');
             const results = await Promise.all([
                 supabase.from('accounts').select('*').order('name'),
                 supabase.from('categories').select('*').order('name'),
@@ -138,20 +139,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 supabase.from('budgets').select('*')
             ]);
 
-            const fetchErrors = results.filter(r => r.error);
-            if (fetchErrors.length > 0) {
-                console.warn('Partial fetch errors encountered:', fetchErrors);
-                // Throw error if something actually failed, including permission denied 42501
-                const actualError = fetchErrors.find(r => r.error?.code !== 'PGRST301');
-                if (actualError) {
-                    const msg = actualError.error?.code === '42501'
-                        ? 'Permissão negada (RLS). Rode o script de recuperação no Supabase.'
-                        : actualError.error?.message || 'Database error';
-                    throw new Error(msg);
-                }
-            }
-
             const [accountsRes, categoriesRes, transactionsRes, budgetsRes] = results;
+            console.log('[Finance] Raw results:', {
+                accounts: accountsRes.data?.length,
+                categories: categoriesRes.data?.length,
+                transactions: transactionsRes.data?.length,
+                budgets: budgetsRes.data?.length
+            });
+
+            if (accountsRes.error) console.error('[Finance] Accounts error:', accountsRes.error);
+            if (categoriesRes.error) console.error('[Finance] Categories error:', categoriesRes.error);
+            if (transactionsRes.error) console.error('[Finance] Transactions error:', transactionsRes.error);
+            if (budgetsRes.error) console.error('[Finance] Budgets error:', budgetsRes.error);
 
             if (accountsRes.data) setAccounts(accountsRes.data.map(a => ({
                 ...a,

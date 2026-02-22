@@ -26,42 +26,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        // Check active session
-        const initAuth = async () => {
-            const timeout = setTimeout(() => {
-                console.warn('Auth initialization taking too long, forcing complete...');
-                setIsLoading(false);
-            }, 8000);
-
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    await fetchProfile(session.user);
-                }
-            } catch (error) {
-                console.error('Error initializing auth:', error);
-            } finally {
-                clearTimeout(timeout);
-                setIsLoading(false);
-            }
-        };
-
-        initAuth();
-
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (session?.user) {
-                await fetchProfile(session.user);
-            } else {
-                setUser(null);
-            }
-            setIsLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
     const fetchProfile = async (supabaseUser: SupabaseUser) => {
         const { data: profile, error } = await supabase
             .from('profiles')
@@ -71,7 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) {
             console.error('Error fetching profile:', error);
-            // Fallback to basic user info if profile fetch fails
             setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
@@ -89,6 +52,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             avatar_url: profile.avatar_url
         });
     };
+
+    useEffect(() => {
+        // Check active session
+        const initAuth = async () => {
+            const start = Date.now();
+            console.log('[Auth] Starting initAuth...');
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                console.log(`[Auth] getSession took ${Date.now() - start}ms`, session?.user?.id);
+                if (session?.user) {
+                    await fetchProfile(session.user);
+                    console.log(`[Auth] fetchProfile took ${Date.now() - start}ms total`);
+                }
+            } catch (error) {
+                console.error('[Auth] Error initializing auth:', error);
+            } finally {
+                setIsLoading(false);
+                console.log(`[Auth] initAuth finished in ${Date.now() - start}ms`);
+            }
+        };
+
+        initAuth();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth state change:', event, session?.user?.email);
+
+            if (session?.user) {
+                // If we already have the profile for this user, don't fetch again
+                // unless it's a 'SIGNED_IN' event which might mean a new login
+                if (user?.id !== session.user.id || event === 'SIGNED_IN') {
+                    await fetchProfile(session.user);
+                }
+            } else {
+                setUser(null);
+            }
+            setIsLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     const login = async (email: string, password: string) => {
         const { error } = await supabase.auth.signInWithPassword({
@@ -118,9 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Error signing out:', error);
         } finally {
             setUser(null);
-            // Clear possible local state
             localStorage.removeItem('supabase.auth.token');
-            // Notify other tabs
             window.dispatchEvent(new Event('storage'));
         }
     };
