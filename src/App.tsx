@@ -201,21 +201,43 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
   const { isLoading: isFinanceLoading, error: financeError } = useFinance();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showForceButton, setShowForceButton] = useState(false);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[App] State:', {
+      isAuthLoading,
+      isFinanceLoading,
+      isAuthenticated,
+      user: user?.email,
+      financeError
+    });
+  }, [isAuthLoading, isFinanceLoading, isAuthenticated, user, financeError]);
+
+  // Show force button after 8 seconds
+  useEffect(() => {
+    if (isAuthLoading || isFinanceLoading) {
+      const timer = setTimeout(() => setShowForceButton(true), 8000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowForceButton(false);
+    }
+  }, [isAuthLoading, isFinanceLoading]);
 
   if (financeError) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
-      <div className="card max-w-md w-full border-danger/20 bg-danger/5 text-center">
-        <div className="w-12 h-12 bg-danger/10 text-danger rounded-full flex items-center justify-center mx-auto mb-4">
-          <Trash2 size={24} />
+      <div className="card max-w-md w-full border-danger/20 bg-danger/5 text-center shadow-2xl">
+        <div className="w-16 h-16 bg-danger/10 text-danger rounded-full flex items-center justify-center mx-auto mb-6">
+          <Trash2 size={32} />
         </div>
-        <h2 className="text-xl font-bold text-danger mb-2">Erro de Conexão</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-6">{financeError}</p>
+        <h2 className="text-2xl font-bold text-danger mb-4">Erro de Conexão</h2>
+        <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">{financeError}</p>
         <button
           onClick={() => window.location.reload()}
-          className="btn btn-primary w-full bg-danger hover:bg-rose-600"
+          className="btn btn-primary w-full bg-danger hover:bg-rose-600 py-4 text-lg"
         >
           Tentar Novamente
         </button>
@@ -224,41 +246,37 @@ function AppContent() {
   );
 
   if (isAuthLoading || isFinanceLoading) {
-    const { user } = useAuth();
-    const [showForceButton, setShowForceButton] = useState(false);
-
-    // Show force button after 10 seconds
-    useEffect(() => {
-      const timer = setTimeout(() => setShowForceButton(true), 10000);
-      return () => clearTimeout(timer);
-    }, []);
-
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
-        <div className="flex flex-col items-center gap-6 max-w-sm w-full">
+        <div className="flex flex-col items-center gap-8 max-w-sm w-full animate-fade-in">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-slate-200 dark:border-slate-800 rounded-full"></div>
-            <div className="absolute top-0 w-16 h-16 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-20 h-20 border-4 border-slate-200 dark:border-slate-800 rounded-full"></div>
+            <div className="absolute top-0 w-20 h-20 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <div className="text-center space-y-2">
-            <p className="text-slate-900 dark:text-white font-bold text-lg">Sincronizando dados...</p>
-            <div className="flex flex-col gap-1">
-              <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
-                Autenticação: {isAuthLoading ? <span className="animate-pulse">◌ Verificando...</span> : <span className="text-success">✓ OK ({user?.email || 'Nenhum'})</span>}
-              </p>
-              <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
-                Banco de Dados: {isFinanceLoading ? <span className="animate-pulse">◌ Conectando...</span> : <span className="text-success">✓ OK</span>}
-              </p>
+          <div className="text-center space-y-4">
+            <p className="text-slate-900 dark:text-white font-bold text-xl tracking-tight">Sincronizando dados...</p>
+            <div className="flex flex-col gap-2 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm w-full">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Autenticação</span>
+                {isAuthLoading ? <span className="text-brand-500 animate-pulse font-medium">Verificando...</span> : <span className="text-success font-bold">✓ OK</span>}
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Banco de Dados</span>
+                {isFinanceLoading ? <span className="text-brand-500 animate-pulse font-medium">Conectando...</span> : <span className="text-success font-bold">✓ OK</span>}
+              </div>
             </div>
           </div>
 
           {showForceButton && (
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-6 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm shadow-lg animate-bounce"
-            >
-              Forçar Recarregamento
-            </button>
+            <div className="flex flex-col items-center gap-4 animate-slide-up w-full">
+              <p className="text-xs text-slate-500 text-center">Isso está demorando mais que o normal...</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-4 bg-brand-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-500/30 hover:bg-brand-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                Recarregar Agora
+              </button>
+            </div>
           )}
         </div>
       </div>

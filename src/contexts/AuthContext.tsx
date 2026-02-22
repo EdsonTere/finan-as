@@ -29,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchProfile = async (supabaseUser: SupabaseUser) => {
         try {
+            console.log('[Auth] Fetching profile from database...');
             const { data: profile, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -36,20 +37,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .single();
 
             if (error) {
-                console.warn('[Auth] Profile fetch failed, using metadata fallback:', error.message);
-                setUser({
-                    id: supabaseUser.id,
-                    email: supabaseUser.email || '',
-                    name: supabaseUser.user_metadata?.name || 'Usuário',
-                    role: 'user'
-                });
+                console.warn('[Auth] Profile record not found or inaccessible:', error.message);
+                // User is already set with metadata in initAuth/onAuthStateChange
                 return;
             }
 
+            console.log('[Auth] Profile loaded successfully.');
             setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
-                name: profile.name || 'Usuário',
+                name: profile.name || supabaseUser.user_metadata?.name || 'Usuário',
                 role: profile.role || 'user',
                 avatar_url: profile.avatar_url
             });
@@ -66,6 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }, 10000);
 
+        let mounted = true;
+
         const initAuth = async () => {
             const start = Date.now();
             console.log('[Auth] Initializing session...');
@@ -73,39 +72,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) throw error;
 
-                if (session?.user) {
-                    console.log('[Auth] Session found, fetching profile...');
-                    await fetchProfile(session.user);
-                } else {
-                    console.log('[Auth] No active session found.');
+                if (session?.user && mounted) {
+                    console.log('[Auth] Session found, setting user from metadata...');
+                    // Set user immediately from basic session data
+                    setUser({
+                        id: session.user.id,
+                        email: session.user.email || '',
+                        name: session.user.user_metadata?.name || 'Usuário',
+                        role: 'user'
+                    });
+
+                    // Fetch full profile in parallel (don't await)
+                    fetchProfile(session.user);
                 }
+
+                if (mounted) setIsLoading(false);
             } catch (error: any) {
                 console.error('[Auth] Error in initAuth:', error.message);
+                if (mounted) setIsLoading(false);
             } finally {
-                setIsLoading(false);
-                isFirstLoad.current = false;
-                clearTimeout(timeout);
-                console.log(`[Auth] Auth initialized in ${Date.now() - start}ms`);
+                if (mounted) {
+                    isFirstLoad.current = false;
+                    clearTimeout(timeout);
+                    console.log(`[Auth] Auth initialized in ${Date.now() - start}ms`);
+                }
             }
         };
-
-        initAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('[Auth] State change event:', event);
 
-            if (session?.user) {
-                await fetchProfile(session.user);
-            } else {
+            if (!session?.user) {
                 setUser(null);
+                setIsLoading(false);
+                return;
             }
 
-            // Only finalize loading if it's still true
+            // Set/Update user immediately from session metadata
+            if (session.user) {
+                setUser(prev => {
+                    // Only update if ID changed or we don't have a user
+                    if (!prev || prev.id !== session.user.id) {
+                        return {
+                            id: session.user.id,
+                            email: session.user.email || '',
+                            name: session.user.user_metadata?.name || 'Usuário',
+                            role: 'user'
+                        };
+                    }
+                    return prev;
+                });
+
+                // Fetch profile in background if it's a new login or ID change
+                fetchProfile(session.user);
+            }
+
             setIsLoading(false);
             isFirstLoad.current = false;
         });
 
+        initAuth();
+
         return () => {
+            mounted = false;
             subscription.unsubscribe();
             clearTimeout(timeout);
         };

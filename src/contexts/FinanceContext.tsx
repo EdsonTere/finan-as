@@ -116,72 +116,82 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return;
         }
 
-        // We depend on Auth state here, although RLS protects the data.
-        // The App.tsx ensures this is only called when authenticated.
-
         if (showLoading) setIsLoading(true);
         setError(null);
 
         const timeout = setTimeout(() => {
             if (showLoading) {
-                console.warn('Finance data fetch taking too long, forcing complete...');
-                setError('A sincronização está demorando mais que o esperado. Seus dados podem aparecer em instantes ou você pode precisar rodar o script de correção no Supabase.');
+                console.warn('[Finance] Fetch data timeout hit (8s). The UI will unlock, but queries might still be pending.');
                 setIsLoading(false);
             }
-        }, 15000);
+        }, 8000);
 
         try {
-            console.log('[Finance] Fetching data...');
-            const results = await Promise.all([
-                supabase.from('accounts').select('*').order('name'),
-                supabase.from('categories').select('*').order('name'),
-                supabase.from('transactions').select('*').order('date', { ascending: false }),
-                supabase.from('budgets').select('*')
+            console.log('[Finance] Starting parallel data fetch...');
+            const start = Date.now();
+
+            const queryTable = async (name: string, query: any) => {
+                const qStart = Date.now();
+                console.log(`[Finance] Querying ${name}...`);
+                try {
+                    const result = await query;
+                    console.log(`[Finance] ${name} finished in ${Date.now() - qStart}ms. Count: ${result.data?.length || 0}`);
+                    if (result.error) console.error(`[Finance] Error in ${name}:`, result.error);
+                    return result;
+                } catch (err) {
+                    console.error(`[Finance] Unexpected error in ${name}:`, err);
+                    return { data: null, error: err };
+                }
+            };
+
+            // Execute all queries in parallel for better performance
+            const [accountsRes, categoriesRes, transactionsRes, budgetsRes] = await Promise.all([
+                queryTable('accounts', supabase.from('accounts').select('*').order('name')),
+                queryTable('categories', supabase.from('categories').select('*').order('name')),
+                queryTable('transactions', supabase.from('transactions').select('*').order('date', { ascending: false }).limit(1000)),
+                queryTable('budgets', supabase.from('budgets').select('*'))
             ]);
 
-            const [accountsRes, categoriesRes, transactionsRes, budgetsRes] = results;
-            console.log('[Finance] Raw results:', {
-                accounts: accountsRes.data?.length,
-                categories: categoriesRes.data?.length,
-                transactions: transactionsRes.data?.length,
-                budgets: budgetsRes.data?.length
-            });
+            console.log(`[Finance] Total fetch time: ${Date.now() - start}ms`);
 
-            if (accountsRes.error) console.error('[Finance] Accounts error:', accountsRes.error);
-            if (categoriesRes.error) console.error('[Finance] Categories error:', categoriesRes.error);
-            if (transactionsRes.error) console.error('[Finance] Transactions error:', transactionsRes.error);
-            if (budgetsRes.error) console.error('[Finance] Budgets error:', budgetsRes.error);
+            if (accountsRes.data) {
+                setAccounts(accountsRes.data.map((a: any) => ({
+                    ...a,
+                    initialBalance: a.initial_balance || 0,
+                    isActive: a.is_active ?? true
+                })));
+            }
 
-            if (accountsRes.data) setAccounts(accountsRes.data.map(a => ({
-                ...a,
-                initialBalance: a.initial_balance || 0,
-                isActive: a.is_active ?? true
-            })));
+            if (categoriesRes.data) {
+                setCategories(categoriesRes.data.map((c: any) => ({
+                    ...c,
+                    isActive: c.is_active ?? true
+                })));
+            }
 
-            if (categoriesRes.data) setCategories(categoriesRes.data.map(c => ({
-                ...c,
-                isActive: c.is_active ?? true
-            })));
+            if (transactionsRes.data) {
+                setTransactions(transactionsRes.data.map((t: any) => ({
+                    ...t,
+                    categoryId: t.category_id,
+                    accountId: t.account_id,
+                    targetAccountId: t.target_account_id,
+                    isFixed: t.is_fixed || false,
+                    isRecurring: t.is_recurring || false,
+                    status: t.status || 'completed',
+                    attachments: t.attachments || []
+                })));
+            }
 
-            if (transactionsRes.data) setTransactions(transactionsRes.data.map(t => ({
-                ...t,
-                categoryId: t.category_id,
-                accountId: t.account_id,
-                targetAccountId: t.target_account_id,
-                isFixed: t.is_fixed || false,
-                isRecurring: t.is_recurring || false,
-                status: t.status || 'completed',
-                attachments: t.attachments || []
-            })));
-
-            if (budgetsRes.data) setBudgets(budgetsRes.data.map(b => ({
-                ...b,
-                categoryId: b.category_id
-            })));
+            if (budgetsRes.data) {
+                setBudgets(budgetsRes.data.map((b: any) => ({
+                    ...b,
+                    categoryId: b.category_id
+                })));
+            }
 
         } catch (err: any) {
-            console.error('Error fetching data from Supabase:', err);
-            setError(err.message || 'Failed to connect to database');
+            console.error('[Finance] Critical fetch error:', err);
+            setError(err.message || 'Erro crítico ao carregar dados');
         } finally {
             clearTimeout(timeout);
             if (showLoading) setIsLoading(false);
