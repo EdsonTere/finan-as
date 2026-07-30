@@ -31,7 +31,9 @@ export const LoginPage: React.FC = () => {
             console.error(err);
             const message = err.message || '';
 
-            if (message.includes('rate limit exceeded')) {
+            if (message.includes('Failed to fetch') || message.includes('fetch')) {
+                setError('Não foi possível conectar ao servidor (Supabase). Verifique sua conexão com a internet ou se o seu projeto no Supabase está pausado no painel.');
+            } else if (message.includes('rate limit exceeded')) {
                 setError('Limite de tentativas excedido. Por favor, aguarde alguns minutos antes de tentar novamente.');
             } else if (message.includes('Invalid login credentials')) {
                 setError('E-mail ou senha incorretos. Por favor, verifique seus dados.');
