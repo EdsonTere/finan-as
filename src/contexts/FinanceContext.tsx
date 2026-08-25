@@ -672,7 +672,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             throw new Error(deleteError.message || 'Backup criado, mas ocorreu um erro ao limpar movimentações do mês.');
         }
 
-        // 3. Atualizar estados em memória
+        // 3. Resetar saldos das contas para o saldo inicial (initial_balance)
+        for (const acc of accounts) {
+            await supabase
+                .from('accounts')
+                .update({ balance: acc.initialBalance })
+                .eq('id', acc.id);
+        }
+        setAccounts(prev => prev.map(a => ({ ...a, balance: a.initialBalance })));
+
+        // 4. Atualizar estados em memória
         const newBackup: MonthlyBackup = {
             id: data.id,
             monthName: data.month_name,
