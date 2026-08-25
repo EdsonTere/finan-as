@@ -3,6 +3,7 @@ import { useFinance } from '../contexts/FinanceContext';
 import { Search, Trash2, Calendar, Wallet } from 'lucide-react';
 import { cn, formatCurrency, formatDate } from '../lib/utils';
 import { TransactionModal } from '../components/TransactionModal';
+import { ClearTransactionsModal } from '../components/ClearTransactionsModal';
 
 interface TransactionsPageProps {
     type?: 'all' | 'income' | 'expense' | 'transfer';
@@ -13,6 +14,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ type = 'all'
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>(type);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isClearModalOpen, setIsClearModalOpen] = useState(false);
     const [modalType, setModalType] = useState<'income' | 'expense' | 'transfer'>('expense');
 
     const filteredTransactions = useMemo(() => {
@@ -36,6 +38,14 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ type = 'all'
                     <p className="text-slate-500 dark:text-slate-400">Histórico completo de sua movimentação financeira.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => setIsClearModalOpen(true)}
+                        className="btn border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs py-2 px-3.5 flex items-center gap-1.5 font-bold transition-all"
+                        title="Limpar receitas e despesas para virar o mês zerado"
+                    >
+                        <Trash2 size={14} />
+                        Limpar Lançamentos
+                    </button>
                     <button onClick={() => openModal('income')} className="btn btn-primary bg-success hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 text-xs py-2 px-4">
                         Nova Receita
                     </button>
@@ -211,6 +221,11 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ type = 'all'
             </div>
 
             <TransactionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} type={modalType} />
+            <ClearTransactionsModal
+                isOpen={isClearModalOpen}
+                onClose={() => setIsClearModalOpen(false)}
+                currentTypeFilter={typeFilter}
+            />
         </div>
     );
 };

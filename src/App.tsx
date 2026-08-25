@@ -9,6 +9,7 @@ import { CategoriesPage } from './pages/CategoriesPage'
 import { TransactionsPage } from './pages/TransactionsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { BudgetsPage } from './pages/BudgetsPage'
+import { BackupsPage } from './pages/BackupsPage'
 import { TransactionModal } from './components/TransactionModal'
 import { cn, formatCurrency, formatDate } from './lib/utils'
 import { Plus, TrendingUp, TrendingDown, Target, FileText, Trash2 } from 'lucide-react'
@@ -295,6 +296,7 @@ function AppContent() {
       {activeTab === 'transfers' && <TransactionsPage type="transfer" />}
       {activeTab === 'reports' && <ReportsPage />}
       {activeTab === 'budgets' && <BudgetsPage />}
+      {activeTab === 'backups' && <BackupsPage />}
       {activeTab === 'settings' && <SettingsPage />}
     </MainLayout>
   );

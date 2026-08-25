@@ -15,7 +15,8 @@ import {
     User,
     LogOut,
     ChevronRight,
-    Tag
+    Tag,
+    Archive
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -85,6 +86,7 @@ export const MainLayout: React.FC<{
         { id: 'transfers', label: 'Transferências', icon: <ArrowLeftRight size={20} /> },
         { id: 'reports', label: 'Relatórios', icon: <BarChart3 size={20} /> },
         { id: 'budgets', label: 'Orçamentos', icon: <PieChart size={20} /> },
+        { id: 'backups', label: 'Backups', icon: <Archive size={20} /> },
         { id: 'settings', label: 'Configurações', icon: <Settings size={20} /> },
     ];
 

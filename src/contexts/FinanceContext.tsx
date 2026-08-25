@@ -59,11 +59,23 @@ export interface Settings {
     currency: string;
 }
 
+export interface MonthlyBackup {
+    id: string;
+    monthName: string;
+    monthKey: string;
+    totalIncome: number;
+    totalExpense: number;
+    netBalance: number;
+    transactions: Transaction[];
+    createdAt: string;
+}
+
 interface FinanceContextType {
     accounts: Account[];
     categories: Category[];
     transactions: Transaction[];
     budgets: Budget[];
+    backups: MonthlyBackup[];
     settings: Settings;
     isLoading: boolean;
     realtimeStatus: string;
@@ -71,6 +83,13 @@ interface FinanceContextType {
     addTransaction: (t: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
     updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
     deleteTransaction: (id: string) => Promise<void>;
+    clearTransactions: (options: {
+        scope: 'all' | 'current_month' | 'type_filtered';
+        typeFilter?: 'all' | 'income' | 'expense' | 'transfer';
+        resetAccountBalances?: boolean;
+    }) => Promise<number>;
+    createMonthlyBackup: (monthTag?: string) => Promise<MonthlyBackup>;
+    deleteMonthlyBackup: (id: string) => Promise<void>;
     addAccount: (acc: Omit<Account, 'id'>) => Promise<void>;
     deleteAccount: (id: string) => Promise<void>;
     updateAccount: (id: string, updates: Partial<Account>) => Promise<void>;
@@ -95,6 +114,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [categories, setCategories] = useState<Category[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [budgets, setBudgets] = useState<Budget[]>([]);
+    const [backups, setBackups] = useState<MonthlyBackup[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [realtimeStatus, setRealtimeStatus] = useState('CONNECTING');
     const [error, setError] = useState<string | null>(null);
@@ -145,11 +165,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             };
 
             // Execute all queries in parallel for better performance
-            const [accountsRes, categoriesRes, transactionsRes, budgetsRes] = await Promise.all([
+            const [accountsRes, categoriesRes, transactionsRes, budgetsRes, backupsRes] = await Promise.all([
                 queryTable('accounts', supabase.from('accounts').select('*').order('name')),
                 queryTable('categories', supabase.from('categories').select('*').order('name')),
                 queryTable('transactions', supabase.from('transactions').select('*').order('date', { ascending: false }).limit(1000)),
-                queryTable('budgets', supabase.from('budgets').select('*'))
+                queryTable('budgets', supabase.from('budgets').select('*')),
+                queryTable('monthly_backups', supabase.from('monthly_backups').select('*').order('created_at', { ascending: false }))
             ]);
 
             console.log(`[Finance] Total fetch time: ${Date.now() - start}ms`);
@@ -186,6 +207,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 setBudgets(budgetsRes.data.map((b: any) => ({
                     ...b,
                     categoryId: b.category_id
+                })));
+            }
+
+            if (backupsRes.data) {
+                setBackups(backupsRes.data.map((b: any) => ({
+                    id: b.id,
+                    monthName: b.month_name,
+                    monthKey: b.month_key,
+                    totalIncome: parseFloat(b.total_income) || 0,
+                    totalExpense: parseFloat(b.total_expense) || 0,
+                    netBalance: parseFloat(b.net_balance) || 0,
+                    transactions: b.transactions || [],
+                    createdAt: b.created_at
                 })));
             }
 
@@ -317,6 +351,80 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setTransactions(prev => prev.filter(trans => trans.id !== id));
         await updateAccountBalance(t.accountId, t.type === 'income' ? -t.amount : t.amount);
         if (t.type === 'transfer' && t.targetAccountId) await updateAccountBalance(t.targetAccountId, -t.amount);
+    };
+
+    const clearTransactions = async (options: {
+        scope: 'all' | 'current_month' | 'type_filtered';
+        typeFilter?: 'all' | 'income' | 'expense' | 'transfer';
+        resetAccountBalances?: boolean;
+    }): Promise<number> => {
+        const { scope, typeFilter = 'all', resetAccountBalances = false } = options;
+        const currentMonthTag = new Date().toISOString().substring(0, 7);
+
+        const toDelete = transactions.filter(t => {
+            if (scope === 'current_month') {
+                if (t.date.substring(0, 7) !== currentMonthTag) return false;
+            }
+            if (scope === 'type_filtered' && typeFilter !== 'all') {
+                if (t.type !== typeFilter) return false;
+            }
+            return true;
+        });
+
+        if (toDelete.length === 0) return 0;
+
+        const idsToDelete = toDelete.map(t => t.id);
+
+        const { error: deleteError } = await supabase
+            .from('transactions')
+            .delete()
+            .in('id', idsToDelete);
+
+        if (deleteError) {
+            console.error('Error deleting transactions in bulk:', deleteError);
+            throw deleteError;
+        }
+
+        setTransactions(prev => prev.filter(t => !idsToDelete.includes(t.id)));
+
+        if (resetAccountBalances) {
+            for (const acc of accounts) {
+                await supabase
+                    .from('accounts')
+                    .update({ balance: acc.initialBalance })
+                    .eq('id', acc.id);
+            }
+            setAccounts(prev => prev.map(a => ({ ...a, balance: a.initialBalance })));
+        } else {
+            const balanceDeltas: Record<string, number> = {};
+
+            toDelete.forEach(t => {
+                if (t.type === 'income') {
+                    balanceDeltas[t.accountId] = (balanceDeltas[t.accountId] || 0) - t.amount;
+                } else if (t.type === 'expense') {
+                    balanceDeltas[t.accountId] = (balanceDeltas[t.accountId] || 0) + t.amount;
+                } else if (t.type === 'transfer') {
+                    balanceDeltas[t.accountId] = (balanceDeltas[t.accountId] || 0) + t.amount;
+                    if (t.targetAccountId) {
+                        balanceDeltas[t.targetAccountId] = (balanceDeltas[t.targetAccountId] || 0) - t.amount;
+                    }
+                }
+            });
+
+            for (const [accountId, delta] of Object.entries(balanceDeltas)) {
+                const acc = accounts.find(a => a.id === accountId);
+                if (acc) {
+                    const newBalance = acc.balance + delta;
+                    await supabase
+                        .from('accounts')
+                        .update({ balance: newBalance })
+                        .eq('id', accountId);
+                    setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, balance: newBalance } : a));
+                }
+            }
+        }
+
+        return toDelete.length;
     };
 
     const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
@@ -504,6 +612,93 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setBudgets(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
     };
 
+    const createMonthlyBackup = async (monthTag?: string): Promise<MonthlyBackup> => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
+        const targetTag = monthTag || new Date().toISOString().substring(0, 7);
+        const monthTx = transactions.filter(t => t.date.substring(0, 7) === targetTag);
+
+        if (monthTx.length === 0) {
+            throw new Error(`Nenhuma transação foi encontrada para o mês (${targetTag}) para gerar backup.`);
+        }
+
+        const dateObj = new Date(targetTag + '-02');
+        const monthNames = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+        const formattedMonthName = `${monthNames[dateObj.getMonth()]} de ${dateObj.getFullYear()}`;
+
+        const totalIncome = monthTx
+            .filter(t => t.type === 'income')
+            .reduce((acc, curr) => acc + (parseFloat(curr.amount.toString()) || 0), 0);
+
+        const totalExpense = monthTx
+            .filter(t => t.type === 'expense')
+            .reduce((acc, curr) => acc + (parseFloat(curr.amount.toString()) || 0), 0);
+
+        const netBalance = totalIncome - totalExpense;
+
+        // 1. Inserir registro na tabela monthly_backups
+        const { data, error: insertError } = await supabase
+            .from('monthly_backups')
+            .insert([{
+                user_id: userId,
+                month_name: formattedMonthName,
+                month_key: targetTag,
+                total_income: totalIncome,
+                total_expense: totalExpense,
+                net_balance: netBalance,
+                transactions: monthTx
+            }])
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error('Error creating monthly backup:', insertError);
+            throw new Error(insertError.message || 'Erro ao criar backup no banco de dados.');
+        }
+
+        // 2. Limpar do banco de dados as transações ativas do mês do backup
+        const idsToDelete = monthTx.map(t => t.id);
+        const { error: deleteError } = await supabase
+            .from('transactions')
+            .delete()
+            .in('id', idsToDelete);
+
+        if (deleteError) {
+            console.error('Error clearing active month transactions:', deleteError);
+            throw new Error(deleteError.message || 'Backup criado, mas ocorreu um erro ao limpar movimentações do mês.');
+        }
+
+        // 3. Atualizar estados em memória
+        const newBackup: MonthlyBackup = {
+            id: data.id,
+            monthName: data.month_name,
+            monthKey: data.month_key,
+            totalIncome: parseFloat(data.total_income) || 0,
+            totalExpense: parseFloat(data.total_expense) || 0,
+            netBalance: parseFloat(data.net_balance) || 0,
+            transactions: data.transactions || [],
+            createdAt: data.created_at
+        };
+
+        setBackups(prev => [newBackup, ...prev.filter(b => b.id !== newBackup.id)]);
+        setTransactions(prev => prev.filter(t => !idsToDelete.includes(t.id)));
+
+        return newBackup;
+    };
+
+    const deleteMonthlyBackup = async (id: string) => {
+        const { error } = await supabase.from('monthly_backups').delete().eq('id', id);
+        if (error) {
+            console.error('Error deleting monthly backup:', error);
+            throw new Error(error.message || 'Erro ao excluir backup.');
+        }
+        setBackups(prev => prev.filter(b => b.id !== id));
+    };
+
     const updateSettings = (updates: Partial<Settings>) => setSettings(prev => ({ ...prev, ...updates }));
 
     const summary = useMemo(() => {
@@ -517,8 +712,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return (
         <FinanceContext.Provider value={{
-            accounts, categories, transactions, budgets, settings, isLoading, realtimeStatus, error,
-            addTransaction, updateTransaction, deleteTransaction, addAccount, deleteAccount, updateAccount,
+            accounts, categories, transactions, budgets, backups, settings, isLoading, realtimeStatus, error,
+            addTransaction, updateTransaction, deleteTransaction, clearTransactions, createMonthlyBackup, deleteMonthlyBackup, addAccount, deleteAccount, updateAccount,
             addCategory, deleteCategory, updateCategory, addBudget, deleteBudget, updateBudget,
             updateSettings, summary
         }}>
