@@ -68,14 +68,14 @@ export const CategoriesPage: React.FC = () => {
                     <button
                         onClick={() => setFilterType('expense')}
                         className={cn("px-4 py-2 rounded-lg text-sm font-bold transition-all",
-                            filterType === 'expense' ? "bg-white dark:bg-slate-700 text-rose-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                            filterType === 'expense' ? "bg-white dark:bg-slate-700 text-rose-600 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200")}
                     >
                         Despesas
                     </button>
                     <button
                         onClick={() => setFilterType('income')}
                         className={cn("px-4 py-2 rounded-lg text-sm font-bold transition-all",
-                            filterType === 'income' ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                            filterType === 'income' ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200")}
                     >
                         Receitas
                     </button>

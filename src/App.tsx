@@ -11,7 +11,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { BudgetsPage } from './pages/BudgetsPage'
 import { BackupsPage } from './pages/BackupsPage'
 import { TransactionModal } from './components/TransactionModal'
-import { cn, formatCurrency, formatDate } from './lib/utils'
+import { cn, formatCurrency, formatDate, getLocalMonthTag } from './lib/utils'
 import { Plus, TrendingUp, TrendingDown, Target, FileText, Trash2 } from 'lucide-react'
 import {
   BarChart,
@@ -38,7 +38,7 @@ function Dashboard() {
     // Generate last 6 months
     return Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      const monthTag = d.toISOString().substring(0, 7);
+      const monthTag = getLocalMonthTag(d);
       const monthIndex = d.getMonth();
 
       const monthIncome = (transactions || [])
@@ -128,10 +128,20 @@ function Dashboard() {
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-main)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <Tooltip cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
+                  contentStyle={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderColor: 'var(--border-main)',
+                    borderRadius: '12px',
+                    color: 'var(--text-main)',
+                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)'
+                  }}
+                  itemStyle={{ color: 'var(--text-main)' }}
+                />
                 <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} name="Receitas" />
                 <Bar dataKey="despesas" fill="#ef4444" radius={[4, 4, 0, 0]} name="Despesas" />
               </BarChart>
@@ -152,7 +162,16 @@ function Dashboard() {
                 >
                   <Cell fill="#10b981" /><Cell fill="#ef4444" />
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderColor: 'var(--border-main)',
+                    borderRadius: '12px',
+                    color: 'var(--text-main)',
+                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)'
+                  }}
+                  itemStyle={{ color: 'var(--text-main)' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

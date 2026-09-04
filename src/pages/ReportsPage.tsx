@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useFinance } from '../contexts/FinanceContext';
 import { FileDown, Printer, FileText, Search, X } from 'lucide-react';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, getLocalDateString, formatDate } from '../lib/utils';
 
 export const ReportsPage: React.FC = () => {
     const { transactions, categories, accounts } = useFinance();
@@ -9,11 +9,11 @@ export const ReportsPage: React.FC = () => {
     // Filter State
     const [startDate, setStartDate] = useState(() => {
         const d = new Date();
-        return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+        return getLocalDateString(new Date(d.getFullYear(), d.getMonth(), 1));
     });
     const [endDate, setEndDate] = useState(() => {
         const d = new Date();
-        return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+        return getLocalDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
     });
     const [categoryId, setCategoryId] = useState('all');
     const [accountId, setAccountId] = useState('all');
@@ -34,11 +34,11 @@ export const ReportsPage: React.FC = () => {
     const setPreset = (type: string) => {
         const now = new Date();
         if (type === 'Mensal') {
-            setStartDate(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
-            setEndDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
+            setStartDate(getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1)));
+            setEndDate(getLocalDateString(new Date(now.getFullYear(), now.getMonth() + 1, 0)));
         } else if (type === 'Anual') {
-            setStartDate(new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0]);
-            setEndDate(new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0]);
+            setStartDate(getLocalDateString(new Date(now.getFullYear(), 0, 1)));
+            setEndDate(getLocalDateString(new Date(now.getFullYear(), 11, 31)));
         }
     };
 
@@ -95,7 +95,7 @@ export const ReportsPage: React.FC = () => {
                                     <button
                                         key={type}
                                         onClick={() => setPreset(type)}
-                                        className="px-3 py-2 rounded-lg text-xs font-bold transition-all bg-slate-50 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 border border-slate-100 dark:border-slate-700"
+                                        className="px-3 py-2 rounded-lg text-xs font-bold transition-all bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 border border-slate-100 dark:border-slate-700"
                                     >
                                         {type}
                                     </button>
@@ -208,7 +208,7 @@ export const ReportsPage: React.FC = () => {
                                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                     {filteredTransactions.map(t => (
                                         <tr key={t.id} className="text-sm group hover:bg-[var(--bg-hover)] transition-colors">
-                                            <td className="py-4 text-slate-500 text-xs">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                                            <td className="py-4 text-slate-500 dark:text-slate-400 text-xs">{formatDate(t.date)}</td>
                                             <td className="py-4 font-semibold dark:text-white">{t.description}</td>
                                             <td className="py-4">
                                                 <div className="flex flex-col gap-1">
@@ -233,7 +233,7 @@ export const ReportsPage: React.FC = () => {
                                 {filteredTransactions.map(t => (
                                     <div key={t.id} className="py-4 space-y-2">
                                         <div className="flex justify-between items-start">
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase">{formatDate(t.date)}</span>
                                             <span className={cn("font-black text-sm", t.type === 'income' ? 'text-success' : t.type === 'expense' ? 'text-danger' : 'text-slate-400')}>
                                                 {formatCurrency(t.amount)}
                                             </span>

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useFinance } from '../contexts/FinanceContext';
 import { X, Calendar, DollarSign, Tag, CreditCard, FileText, Check } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, getLocalDateString } from '../lib/utils';
 
 const transactionSchema = z.object({
     description: z.string().min(3, 'Descrição muito curta'),
@@ -44,7 +44,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
         resolver: zodResolver(transactionSchema),
         defaultValues: {
             type,
-            date: new Date().toISOString().split('T')[0],
+            date: getLocalDateString(),
             isFixed: false,
             isRecurring: false,
         }
@@ -58,7 +58,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 type,
                 description: '',
                 amount: 0,
-                date: new Date().toISOString().split('T')[0],
+                date: getLocalDateString(),
                 isFixed: false,
                 isRecurring: false,
                 accountId: '',
@@ -201,7 +201,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                         <label className="flex items-center gap-2 cursor-pointer group">
                             <div className="relative flex items-center justify-center">
                                 <input type="checkbox" {...register('isFixed')} className="peer sr-only" />
-                                <div className="w-5 h-5 border-2 border-slate-300 rounded group-hover:border-brand-500 peer-checked:bg-brand-600 peer-checked:border-brand-600 transition-all"></div>
+                                <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-700 rounded group-hover:border-brand-500 peer-checked:bg-brand-600 peer-checked:border-brand-600 transition-all"></div>
                                 <Check className="absolute text-white w-3 h-3 scale-0 peer-checked:scale-100 transition-transform" />
                             </div>
                             <span className="text-sm text-slate-600 dark:text-slate-400">Fixa</span>
@@ -209,7 +209,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                         <label className="flex items-center gap-2 cursor-pointer group">
                             <div className="relative flex items-center justify-center">
                                 <input type="checkbox" {...register('isRecurring')} className="peer sr-only" />
-                                <div className="w-5 h-5 border-2 border-slate-300 rounded group-hover:border-brand-500 peer-checked:bg-brand-600 peer-checked:border-brand-600 transition-all"></div>
+                                <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-700 rounded group-hover:border-brand-500 peer-checked:bg-brand-600 peer-checked:border-brand-600 transition-all"></div>
                                 <Check className="absolute text-white w-3 h-3 scale-0 peer-checked:scale-100 transition-transform" />
                             </div>
                             <span className="text-sm text-slate-600 dark:text-slate-400">Recorrente</span>

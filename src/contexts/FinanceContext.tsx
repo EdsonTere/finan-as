@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { getLocalMonthTag } from '../lib/utils';
 
 export type AccountType = 'bank' | 'wallet' | 'credit' | 'debit' | 'pix' | 'other';
 
@@ -57,6 +58,7 @@ export interface Settings {
     theme: 'light' | 'dark' | 'system';
     notifications: boolean;
     currency: string;
+    autoBackup?: boolean;
 }
 
 export interface MonthlyBackup {
@@ -126,7 +128,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } catch (e) {
             console.error('Error parsing settings', e);
         }
-        return { theme: 'system', notifications: true, currency: 'BRL' };
+        return { theme: 'system', notifications: true, currency: 'BRL', autoBackup: true };
     });
 
     const fetchData = useCallback(async (showLoading = true) => {
@@ -305,8 +307,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
 
+        const dateToInsert = (t.date && t.date.length === 10) ? `${t.date}T12:00:00` : t.date;
+
         const { data, error } = await supabase.from('transactions').insert([{
-            date: t.date,
+            date: dateToInsert,
             amount: t.amount,
             type: t.type,
             category_id: t.categoryId || null,
@@ -359,7 +363,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         resetAccountBalances?: boolean;
     }): Promise<number> => {
         const { scope, typeFilter = 'all', resetAccountBalances = false } = options;
-        const currentMonthTag = new Date().toISOString().substring(0, 7);
+        const currentMonthTag = getLocalMonthTag();
 
         const toDelete = transactions.filter(t => {
             if (scope === 'current_month') {
@@ -616,19 +620,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
 
-        const targetTag = monthTag || new Date().toISOString().substring(0, 7);
+        const targetTag = monthTag || getLocalMonthTag();
         const monthTx = transactions.filter(t => t.date.substring(0, 7) === targetTag);
 
         if (monthTx.length === 0) {
             throw new Error(`Nenhuma transação foi encontrada para o mês (${targetTag}) para gerar backup.`);
         }
 
-        const dateObj = new Date(targetTag + '-02');
+        const [yearStr, monthStr] = targetTag.split('-');
         const monthNames = [
             'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
         ];
-        const formattedMonthName = `${monthNames[dateObj.getMonth()]} de ${dateObj.getFullYear()}`;
+        const formattedMonthName = `${monthNames[parseInt(monthStr, 10) - 1]} de ${yearStr}`;
 
         const totalIncome = monthTx
             .filter(t => t.type === 'income')
@@ -702,16 +706,84 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const deleteMonthlyBackup = async (id: string) => {
         const { error } = await supabase.from('monthly_backups').delete().eq('id', id);
         if (error) {
-            console.error('Error deleting monthly backup:', error);
             throw new Error(error.message || 'Erro ao excluir backup.');
         }
         setBackups(prev => prev.filter(b => b.id !== id));
     };
 
+    const isRunningAutoBackupRef = React.useRef(false);
+
+    const checkAndRunAutoBackup = useCallback(async () => {
+        if (settings.autoBackup === false || isLoading || transactions.length === 0 || isRunningAutoBackupRef.current) {
+            return;
+        }
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const currentDate = now.getDate();
+        const currentHours = now.getHours();
+        const currentMinutes = now.getMinutes();
+
+        const currentMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        const lastDayOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        // Verifica se é o último dia do mês e hora é 23:59 (ou mais tarde)
+        const isLastDayAnd2359 = (currentDate === lastDayOfCurrentMonth && (currentHours > 23 || (currentHours === 23 && currentMinutes >= 59)));
+
+        // Buscar transações de meses anteriores encerrados que ainda não possuem backup registrado
+        const pastMonthsTx = transactions.filter(t => {
+            const monthKey = t.date.substring(0, 7);
+            return monthKey < currentMonthKey;
+        });
+
+        const pastMonthsToBackup = Array.from(new Set(pastMonthsTx.map(t => t.date.substring(0, 7))))
+            .filter(mKey => !backups.some(b => b.monthKey === mKey));
+
+        if (pastMonthsToBackup.length > 0) {
+            isRunningAutoBackupRef.current = true;
+            try {
+                for (const mKey of pastMonthsToBackup) {
+                    console.log(`[AutoBackup] Gerando backup automático de mês encerrado: ${mKey}`);
+                    await createMonthlyBackup(mKey);
+                }
+            } catch (err) {
+                console.error('[AutoBackup] Erro ao processar backup automático de mês passado:', err);
+            } finally {
+                isRunningAutoBackupRef.current = false;
+            }
+        }
+
+        if (isLastDayAnd2359 && !backups.some(b => b.monthKey === currentMonthKey)) {
+            const currentMonthTx = transactions.filter(t => t.date.substring(0, 7) === currentMonthKey);
+            if (currentMonthTx.length > 0) {
+                isRunningAutoBackupRef.current = true;
+                try {
+                    console.log(`[AutoBackup] Gerando backup automático de virada de mês (23:59hs): ${currentMonthKey}`);
+                    await createMonthlyBackup(currentMonthKey);
+                } catch (err) {
+                    console.error('[AutoBackup] Erro ao processar backup automático de 23:59hs:', err);
+                } finally {
+                    isRunningAutoBackupRef.current = false;
+                }
+            }
+        }
+    }, [settings.autoBackup, isLoading, transactions, backups, createMonthlyBackup]);
+
+    useEffect(() => {
+        if (!isLoading) {
+            checkAndRunAutoBackup();
+            const interval = setInterval(() => {
+                checkAndRunAutoBackup();
+            }, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [isLoading, checkAndRunAutoBackup]);
+
     const updateSettings = (updates: Partial<Settings>) => setSettings(prev => ({ ...prev, ...updates }));
 
     const summary = useMemo(() => {
-        const currentMonthTag = new Date().toISOString().substring(0, 7);
+        const currentMonthTag = getLocalMonthTag();
         return {
             totalBalance: (accounts || []).reduce((acc, curr) => acc + (parseFloat(curr.balance.toString()) || 0), 0),
             monthlyIncome: (transactions || []).filter(t => t.type === 'income' && t.date.substring(0, 7) === currentMonthTag).reduce((acc, curr) => acc + (parseFloat(curr.amount.toString()) || 0), 0),

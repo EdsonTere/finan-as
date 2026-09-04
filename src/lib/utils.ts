@@ -12,7 +12,27 @@ export const formatCurrency = (value: number) => {
     }).format(value);
 };
 
+export const getLocalDateString = (d: Date = new Date()): string => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+export const getLocalMonthTag = (d: Date = new Date()): string => {
+    return getLocalDateString(d).substring(0, 7);
+};
+
 export const formatDate = (date: string) => {
+    if (!date) return '';
+    const dateOnly = date.split('T')[0];
+    const parts = dateOnly.split('-');
+    if (parts.length === 3) {
+        const [year, month, day] = parts;
+        if (year.length === 4 && month.length === 2 && day.length === 2) {
+            return `${day}/${month}/${year}`;
+        }
+    }
     return new Date(date).toLocaleDateString('pt-BR');
 };
 

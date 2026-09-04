@@ -193,11 +193,11 @@ export const MainLayout: React.FC<{
                                 {realtimeStatus === 'SUBSCRIBED' ? "Sincronizado" : realtimeStatus}
                             </span>
                         </div>
-                        <button className="p-1.5 sm:p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative">
+                        <button className="p-1.5 sm:p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative">
                             <Bell size={18} className="sm:w-5 sm:h-5" />
                             <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-danger rounded-full border-2 border-white dark:border-slate-900"></span>
                         </button>
-                        <div className="h-6 sm:h-8 w-[1px] bg-slate-200 dark:border-slate-800 hidden xs:block"></div>
+                        <div className="h-6 sm:h-8 w-[1px] bg-slate-200 dark:bg-slate-800 hidden xs:block"></div>
                         <div className="flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-semibold dark:text-white leading-none">Edson Admin</p>

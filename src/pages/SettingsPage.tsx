@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFinance } from '../contexts/FinanceContext';
-import { User, Bell, Shield, Moon, Sun, LogOut, ChevronRight, Palette } from 'lucide-react';
+import { User, Bell, Shield, Moon, Sun, LogOut, ChevronRight, Palette, Archive } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ProfileModal } from '../components/ProfileModal';
 
@@ -41,6 +41,15 @@ export const SettingsPage: React.FC = () => {
         {
             title: 'Sistema',
             items: [
+                {
+                    id: 'autobackup',
+                    label: 'Backup Mensal Automático (23:59hs)',
+                    icon: <Archive size={18} />,
+                    desc: 'Backup no último dia do mês às 23:59h ou na abertura do novo mês.',
+                    action: <div className={`w-10 h-6 rounded-full p-1 transition-colors cursor-pointer ${settings.autoBackup !== false ? 'bg-brand-500' : 'bg-slate-200 dark:bg-slate-700'}`} onClick={(e) => { e.stopPropagation(); updateSettings({ autoBackup: settings.autoBackup === false ? true : false }); }}>
+                        <div className={`w-4 h-4 bg-white rounded-full transition-transform ${settings.autoBackup !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                },
                 {
                     id: 'theme',
                     label: 'Tema e Aparência',

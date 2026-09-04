@@ -79,7 +79,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ type = 'all'
                                     "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all uppercase tracking-wider",
                                     typeFilter === t
                                         ? "bg-brand-600 text-white shadow-lg shadow-brand-500/20"
-                                        : "bg-slate-50 text-slate-500 dark:bg-slate-800 hover:bg-slate-100"
+                                        : "bg-slate-50 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
                                 )}
                             >
                                 {t === 'all' ? 'Tudo' : t === 'income' ? 'Receitas' : t === 'expense' ? 'Despesas' : 'Transf.'}
@@ -124,7 +124,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ type = 'all'
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                                             <Wallet size={12} />
                                             {accounts.find(a => a.id === t.accountId)?.name || 'N/A'}
                                         </div>

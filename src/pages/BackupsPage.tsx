@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useFinance, type MonthlyBackup } from '../contexts/FinanceContext';
-import { formatCurrency, formatDate } from '../lib/utils';
+import { formatCurrency, formatDate, getLocalMonthTag } from '../lib/utils';
 import { Archive, Plus, Trash2, Calendar, Eye, Download, CheckCircle2, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const BackupsPage: React.FC = () => {
-    const { backups, createMonthlyBackup, deleteMonthlyBackup, categories } = useFinance();
+    const { backups, createMonthlyBackup, deleteMonthlyBackup, categories, settings, updateSettings } = useFinance();
     const [selectedBackup, setSelectedBackup] = useState<MonthlyBackup | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const currentMonthTag = new Date().toISOString().substring(0, 7);
+    const currentMonthTag = getLocalMonthTag();
 
     const handleGenerateBackup = async () => {
         setIsGenerating(true);
@@ -92,6 +92,33 @@ export const BackupsPage: React.FC = () => {
                         <Plus size={20} />
                     )}
                     <span>Gerar Backup do Mês Atual</span>
+                </button>
+            </div>
+
+            {/* Auto Backup Info Card */}
+            <div className="bg-brand-50/50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                        <Archive size={20} />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200">
+                            Backup Mensal Automático {settings.autoBackup !== false ? 'Ativado (23:59hs)' : 'Desativado'}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            O sistema realiza o fechamento automaticamente no último dia do mês às 23:59h ou ao abrir o sistema no novo mês.
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => updateSettings({ autoBackup: settings.autoBackup === false ? true : false })}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors shrink-0 ${
+                        settings.autoBackup !== false
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                    }`}
+                >
+                    {settings.autoBackup !== false ? '✓ Ativado' : 'Ativar Backup Automático'}
                 </button>
             </div>
 
